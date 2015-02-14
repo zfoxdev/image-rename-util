@@ -2,15 +2,16 @@ package driver;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
@@ -21,6 +22,7 @@ import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.internal.image.GIFFileFormat;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
@@ -53,11 +55,15 @@ public class Driver extends ApplicationWindow {
 	
 	private Queue<MyImage> imageQueue = new LinkedList<>();
 	private Map<String, Integer> nameCountMap = new HashMap<>();
+	private List<String> configData = new ArrayList<>();
 	
 	private File imageDir;
 	private File outputsDir;
 	
 	private MyImage currentImage = null;
+	
+	private final static String IDENTIFIER = "\\*";
+	private final static String IDENTIFIER_SHORT = "*";
 	
 	/**
 	 * Create the application window,
@@ -237,21 +243,10 @@ public class Driver extends ApplicationWindow {
 		try{
 			DirectoryDialog dialog = new DirectoryDialog(this.getShell());
 			String dirPath = dialog.open();
-			System.out.println(dirPath);
 			if(dirPath != null){
 				imageDir = new File(dirPath);
 				imageQueue.clear();
-				FilenameFilter filter = new FilenameFilter() {
-					@Override
-					public boolean accept(File dir, String name) {
-						if(name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
-						  || name.endsWith("bmp") || name.endsWith("tiff") || name.endsWith("gif")){
-							return true;
-						}
-						return false;
-					}
-				};
-				for(File f : imageDir.listFiles(filter)){
+				for(File f : imageDir.listFiles(getImageFileFilter())){
 					if(f.isFile() && !f.isHidden()){
 						Image image = SWTResourceManager.getImage(f.getAbsolutePath());
 						imageQueue.add(new MyImage(image, f.getName()));
@@ -273,11 +268,13 @@ public class Driver extends ApplicationWindow {
 			FileDialog dialog = new FileDialog(this.getShell());
 			String filePath = dialog.open();
 			if(filePath != null && filePath.endsWith(".txt")){
+				configData.clear();
 				File configFile = new File(filePath);
 				BufferedReader br = new BufferedReader(new FileReader(configFile));
 				String line = "";
 				while((line = br.readLine()) != null){
 					combo_name.add(line);
+					configData.add(line);
 				}
 				configLoaded = true;
 				lbl_loadConfigIcon.setImage(SWTResourceManager.getImage(Driver.class, "/Images/success.png"));
@@ -297,6 +294,7 @@ public class Driver extends ApplicationWindow {
 					outputsDirSelected = true;
 					outputsDir = temp;
 					lblOutputsicon.setImage(SWTResourceManager.getImage(Driver.class, "/Images/success.png"));
+					initImageCounts(outputsDir, nameCountMap);
 				}
 			}
 		}catch(Exception e){
@@ -306,23 +304,52 @@ public class Driver extends ApplicationWindow {
 	
 	public void validateResults(){
 		//TODO
+		if(alertOnMissingOutputsDir() || alertOnMissingConfig()){
+			return;
+		}
+		
 		//Check for missing files that are listed in config
-		//Check for extra files that are not listed in config
+		StringBuilder resultStr = new StringBuilder("Missing Files:");
+		for(String configLine : configData){
+			String regexConfigLine = configLine.replaceFirst(IDENTIFIER, "[0-9]+");
+			regexConfigLine = regexConfigLine + ".[a-zA-z]+";
+			boolean match = false;
+			for(File file : outputsDir.listFiles(getImageFileFilter())){
+				String filename = file.getName();
+				if(filename.matches(regexConfigLine)){
+					match = true;
+					break;
+				}
+			}
+			if(!match){
+				resultStr.append("\n\t"+configLine);
+			}
+		}
+		
 		//List occurrences of each type of file name
+		resultStr.append("\nFile Count:");
+		Map<String, Integer> countMap = new HashMap<>();
+		for(File file : outputsDir.listFiles(getImageFileFilter())){
+			String genericFilename = getGenericFilename(file.getName());
+			if(countMap.containsKey(genericFilename)){
+				int count = countMap.get(genericFilename);
+				countMap.put(genericFilename, count+1);
+			}else{
+				countMap.put(genericFilename, 1);
+			}
+		}
+		for(String key : countMap.keySet()){
+			resultStr.append("\n\t"+key+" : "+ countMap.get(key));
+		}
+		
+		MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_INFORMATION | SWT.OK);
+		messageBox.setMessage(resultStr.toString());
+		messageBox.open();
 	}
 	
 	public void assignImageName(){
 		try{
-			if(currentImage == null){
-				MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
-				messageBox.setMessage("No image to assign name to");
-				messageBox.open();
-				return;
-			}
-			if(!outputsDirSelected){
-				MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
-				messageBox.setMessage("No output directory selected");
-				messageBox.open();
+			if(alertOnMissingImages() || alertOnMissingOutputsDir()){
 				return;
 			}
 			String name = combo_name.getText();
@@ -334,14 +361,14 @@ public class Driver extends ApplicationWindow {
 			}
 			
 			//Add number to name;
-			if(name.contains("*")){
+			if(name.contains(IDENTIFIER_SHORT)){
 				int count = 0;
 				if(nameCountMap.containsKey(name)){
 					count = nameCountMap.get(name);
 				}
 				++count;
 				nameCountMap.put(name, count);
-				name = name.replaceFirst("*", count+"");
+				name = name.replaceFirst(IDENTIFIER, count+"");
 			}
 			
 			//Check if file already exists
@@ -351,7 +378,7 @@ public class Driver extends ApplicationWindow {
 				MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_QUESTION | SWT.YES | SWT.NO);
 				messageBox.setMessage("A file already exists with that name. Overwrite?");
 				int responseCode = messageBox.open();
-				if(responseCode == SWT.YES){
+				if(responseCode == SWT.NO){
 					return;
 				}
 			}
@@ -379,6 +406,96 @@ public class Driver extends ApplicationWindow {
 			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_INFORMATION | SWT.OK);
 			messageBox.setMessage("Done processing images");
 			messageBox.open();
+		}
+	}
+	
+	private boolean alertOnMissingOutputsDir(){
+		if(!outputsDirSelected){
+			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
+			messageBox.setMessage("No output directory selected");
+			messageBox.open();
+			return true;
+		}
+		return false;
+	}
+	
+	private boolean alertOnMissingConfig(){
+		if(!configLoaded){
+			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
+			messageBox.setMessage("No configuration file loaded");
+			messageBox.open();
+			return true;
+		}
+		return false;
+	}
+	
+	private boolean alertOnMissingImages(){
+		if(currentImage == null || !imagesLoaded){
+			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
+			messageBox.setMessage("No images loaded");
+			messageBox.open();
+			return true;
+		}
+		return false;
+	}
+	
+	private FilenameFilter getImageFileFilter(){
+		FilenameFilter filter = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				if(name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
+				  || name.endsWith("bmp") || name.endsWith("tiff") || name.endsWith("gif")){
+					return true;
+				}
+				return false;
+			}
+		};
+		return filter;
+	}
+	
+	private void initImageCounts(File outputsDir, Map<String, Integer> countMap){
+		try{
+			for(File file : outputsDir.listFiles(getImageFileFilter())){
+				String filename = file.getName();
+				int count = getCountFromName(filename);
+				String genericFilename = getGenericFilename(filename);
+				if(countMap.containsKey(filename)){
+					int current = countMap.get(filename);
+					if(count > current){
+						countMap.put(genericFilename, count);
+					}
+				}else{
+					countMap.put(genericFilename, count);
+				}
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	private int getCountFromName(String filename){
+		try{
+			String numberStr = filename.replaceFirst("[^0-9]*", ""); //delete everything before the first set of numbers
+			numberStr = numberStr.replaceFirst("[^0-9].*", ""); //delete everything after the first set of numbers
+			int result = Integer.parseInt(numberStr);
+			return result;
+		}catch(Exception e){
+			return 0;
+		}
+	}
+	
+	private String getGenericFilename(String filename){
+		try{
+			int count = getCountFromName(filename);
+			//Make filename generic by replacing count with *
+			String genericFilename = filename.replaceFirst(count+"", "*");
+			//Remove extension from filename
+			genericFilename = genericFilename.substring(0, genericFilename.indexOf("."));
+			
+			return genericFilename;
+		}catch(Exception e){
+			e.printStackTrace();
+			return filename;
 		}
 	}
 
