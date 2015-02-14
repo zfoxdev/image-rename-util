@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
+import logic.util.ImageUtil;
+
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
@@ -65,6 +67,8 @@ public class Driver extends ApplicationWindow {
 	private final static String IDENTIFIER = "\\*";
 	private final static String IDENTIFIER_SHORT = "*";
 	
+	private final int previewImageSize = 300;
+	
 	/**
 	 * Create the application window,
 	 */
@@ -84,12 +88,12 @@ public class Driver extends ApplicationWindow {
 		
 		Composite container = new Composite(parent, SWT.NONE);
 		container.setBackground(SWTResourceManager.getColor(SWT.COLOR_WIDGET_BACKGROUND));
-		GridLayout gl_container = new GridLayout(3, false);
+		GridLayout gl_container = new GridLayout(4, false);
 		gl_container.marginHeight = 0;
 		container.setLayout(gl_container);
 		
 		Composite comp_setupBar = new Composite(container, SWT.NO_BACKGROUND);
-		comp_setupBar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 3, 1));
+		comp_setupBar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 4, 1));
 		comp_setupBar.setLayout(new GridLayout(8, false));
 		
 		lbl_loadImagesIcon = new Label(comp_setupBar, SWT.NONE);
@@ -146,9 +150,9 @@ public class Driver extends ApplicationWindow {
 		btn_validate.setText("Validate");
 		
 		lblImage = new Label(container, SWT.NONE);
-		GridData gd_lblImage = new GridData(SWT.CENTER, SWT.CENTER, true, true, 3, 1);
-		gd_lblImage.minimumWidth = 300;
-		gd_lblImage.minimumHeight = 300;
+		GridData gd_lblImage = new GridData(SWT.CENTER, SWT.CENTER, true, true, 4, 1);
+		gd_lblImage.minimumWidth = previewImageSize;
+		gd_lblImage.minimumHeight = previewImageSize;
 		lblImage.setLayoutData(gd_lblImage);
 		
 		combo_name = new Combo(container, SWT.NONE);
@@ -163,6 +167,15 @@ public class Driver extends ApplicationWindow {
 		});
 		btnAssign.setText("Assign");
 		btnAssign.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
+		
+		Button btnSkip = new Button(container, SWT.NONE);
+		btnSkip.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseUp(MouseEvent e) {
+				nextImage();
+			}
+		});
+		btnSkip.setText("Skip");
 		new Label(container, SWT.NONE);
 		
 		return container;
@@ -249,7 +262,8 @@ public class Driver extends ApplicationWindow {
 				for(File f : imageDir.listFiles(getImageFileFilter())){
 					if(f.isFile() && !f.isHidden()){
 						Image image = SWTResourceManager.getImage(f.getAbsolutePath());
-						imageQueue.add(new MyImage(image, f.getName()));
+						Image scaledImage = ImageUtil.scaledResize(image, previewImageSize, previewImageSize);
+						imageQueue.add(new MyImage(scaledImage, f.getName()));
 					}
 				}
 				if(!imageQueue.isEmpty()){
@@ -475,6 +489,7 @@ public class Driver extends ApplicationWindow {
 	
 	private int getCountFromName(String filename){
 		try{
+			String reverseStr = reverse(filename);
 			String numberStr = filename.replaceFirst("[^0-9]*", ""); //delete everything before the first set of numbers
 			numberStr = numberStr.replaceFirst("[^0-9].*", ""); //delete everything after the first set of numbers
 			int result = Integer.parseInt(numberStr);
@@ -484,11 +499,21 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	private String reverse(String str){
+		String reverseStr = "";
+		for(int i=str.length()-1; i >= 0; --i){
+			reverseStr = reverseStr + str.charAt(i);
+		}
+		return reverseStr;
+	}
+	
 	private String getGenericFilename(String filename){
 		try{
 			int count = getCountFromName(filename);
-			//Make filename generic by replacing count with *
-			String genericFilename = filename.replaceFirst(count+"", "*");
+			//Make filename generic by replacing last occurence of count with *
+			String genericFilename = reverse(filename);
+			genericFilename = genericFilename.replaceFirst(count+"", "*");
+			genericFilename = reverse(genericFilename);
 			//Remove extension from filename
 			genericFilename = genericFilename.substring(0, genericFilename.indexOf("."));
 			
