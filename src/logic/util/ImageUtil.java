@@ -21,14 +21,14 @@ public class ImageUtil {
 	}
 	
 	public static Image scaledResize(Image image, int width, int height) {
-		int startWidth = image.getBounds().x;
-		int startHeight = image.getBounds().y;
+		float startWidth = image.getImageData().width;
+		float startHeight = image.getImageData().height;
 		int scaledWidth = width;
 		int scaledHeight = height;
 		if(startWidth > startHeight){
-			scaledHeight =  scaledWidth/startWidth*startHeight;
+			scaledHeight =  (int) (scaledWidth/startWidth*startHeight);
 		}else{
-			scaledWidth = scaledHeight/startHeight*startWidth;
+			scaledWidth = (int) (scaledHeight/startHeight*startWidth);
 		}
 		return resize(image, scaledWidth, scaledHeight);
 	}
