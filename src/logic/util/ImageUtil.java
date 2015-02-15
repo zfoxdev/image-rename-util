@@ -5,8 +5,24 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
+/**
+ * Image related utility functions.
+ * 
+ * @author Zachary Fox
+ * @since	Version - 1.0.0
+ * @version Version - 1.0.0
+ */
 public class ImageUtil {
 
+	/**
+	 * Resizes an image and returns the new image. 
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param 	image The <code>Image</code> to resize
+	 * @param	width The new width of the image
+	 * @param	height The new height of the image
+	 */
 	public static Image resize(Image image, int width, int height) {
 		Image scaled = new Image(Display.getDefault(), width, height);
 		GC gc = new GC(scaled);
@@ -20,6 +36,16 @@ public class ImageUtil {
 		return scaled;
 	}
 	
+	/**
+	 * Resizes an image, while maintaining the current
+	 * width to height ratio.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param 	image The <code>Image</code> to resize
+	 * @param	width The new width of the image
+	 * @param	height The new height of the image
+	 */
 	public static Image scaledResize(Image image, int width, int height) {
 		float startWidth = image.getImageData().width;
 		float startHeight = image.getImageData().height;

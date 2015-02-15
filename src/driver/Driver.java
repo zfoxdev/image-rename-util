@@ -24,7 +24,6 @@ import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.internal.image.GIFFileFormat;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
@@ -41,6 +40,11 @@ import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.wb.swt.SWTResourceManager;
 
+/**
+ * @author 	Zachary Fox
+ * @since	Version - 1.0.0
+ * @version Version - 1.0.0
+ */
 public class Driver extends ApplicationWindow {
 
 	
@@ -81,6 +85,7 @@ public class Driver extends ApplicationWindow {
 
 	/**
 	 * Create contents of the application window.
+	 * @author Zachary Fox
 	 * @param parent
 	 */
 	@Override
@@ -199,16 +204,6 @@ public class Driver extends ApplicationWindow {
 	}
 
 	/**
-	 * Create the coolbar manager.
-	 * @return the coolbar manager
-	 */
-	@Override
-	protected CoolBarManager createCoolBarManager(int style) {
-		CoolBarManager coolBarManager = new CoolBarManager(style);
-		return coolBarManager;
-	}
-
-	/**
 	 * Create the status line manager.
 	 * @return the status line manager
 	 */
@@ -252,6 +247,12 @@ public class Driver extends ApplicationWindow {
 		return new Point(650, 500);
 	}
 	
+	/**
+	 * Loads the images that will be renamed.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void loadImages(){
 		try{
 			DirectoryDialog dialog = new DirectoryDialog(this.getShell());
@@ -277,6 +278,13 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Loads the configuration file that contains the name patterns
+	 * to use in the combo box.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void loadConfig(){
 		try{
 			FileDialog dialog = new FileDialog(this.getShell());
@@ -298,6 +306,13 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Selects the outputs directory for the
+	 * renamed images.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void selectOutputsDirectory(){
 		try{
 			DirectoryDialog dialog = new DirectoryDialog(this.getShell());
@@ -316,8 +331,15 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Runs some validation on the outputs directory
+	 * comparing it to the configuration file and 
+	 * prints some useful information.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void validateResults(){
-		//TODO
 		if(alertOnMissingOutputsDir() || alertOnMissingConfig()){
 			return;
 		}
@@ -361,6 +383,12 @@ public class Driver extends ApplicationWindow {
 		messageBox.open();
 	}
 	
+	/**
+	 * Assigns a new name to the current image.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void assignImageName(){
 		try{
 			if(alertOnMissingImages() || alertOnMissingOutputsDir()){
@@ -408,6 +436,12 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Moves to the next image in the queue.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	public void nextImage(){
 		if(!imageQueue.isEmpty()){
 			currentImage = imageQueue.poll();
@@ -423,6 +457,13 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Alerts the user that they have not
+	 * selected an outputs directory.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	private boolean alertOnMissingOutputsDir(){
 		if(!outputsDirSelected){
 			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
@@ -433,6 +474,13 @@ public class Driver extends ApplicationWindow {
 		return false;
 	}
 	
+	/**
+	 * Alerts the user that they have not
+	 * selected a configuration file.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	private boolean alertOnMissingConfig(){
 		if(!configLoaded){
 			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
@@ -443,6 +491,13 @@ public class Driver extends ApplicationWindow {
 		return false;
 	}
 	
+	/**
+	 * Alerts the user that no image is
+	 * currently selected.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	private boolean alertOnMissingImages(){
 		if(currentImage == null || !imagesLoaded){
 			MessageBox messageBox = new MessageBox(this.getShell(), SWT.ICON_ERROR | SWT.OK);
@@ -453,6 +508,13 @@ public class Driver extends ApplicationWindow {
 		return false;
 	}
 	
+	/**
+	 * A filename filter for the accepted
+	 * image extensions.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	private FilenameFilter getImageFileFilter(){
 		FilenameFilter filter = new FilenameFilter() {
 			@Override
@@ -467,6 +529,18 @@ public class Driver extends ApplicationWindow {
 		return filter;
 	}
 	
+	/**
+	 * Checks the outputs directory for existing
+	 * images and initialized the count for each
+	 * image name. This allows the user to use
+	 * the same outputs directory over multiple 
+	 * sessions.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param	outputsDir The directory where image will be sent.
+	 * @param	countMap the map being used to track the count for each filename
+	 */
 	private void initImageCounts(File outputsDir, Map<String, Integer> countMap){
 		try{
 			for(File file : outputsDir.listFiles(getImageFileFilter())){
@@ -487,6 +561,14 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Attempts to retrieve the count from 
+	 * a filename.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param	filename The filename to get a count from
+	 */
 	private int getCountFromName(String filename){
 		try{
 			String reverseStr = reverse(filename);
@@ -499,6 +581,13 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 	
+	/**
+	 * Reverses a <code>String</code>.
+	 * 
+	 * @author Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param	str The <code>String</code> to reverse
+	 */
 	private String reverse(String str){
 		String reverseStr = "";
 		for(int i=str.length()-1; i >= 0; --i){
@@ -507,6 +596,15 @@ public class Driver extends ApplicationWindow {
 		return reverseStr;
 	}
 	
+	/**
+	 * Converts a filename to its generic form
+	 * by replacing the count with the identifier
+	 * character.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 * @param	filename The filename to make generic
+	 */
 	private String getGenericFilename(String filename){
 		try{
 			int count = getCountFromName(filename);
@@ -524,6 +622,13 @@ public class Driver extends ApplicationWindow {
 		}
 	}
 
+	/**
+	 * An inner class that stores the
+	 * filename along with the image.
+	 * 
+	 * @author 	Zachary Fox
+	 * @since	Version - 1.0.0
+	 */
 	private class MyImage{
 		public Image image = null;
 		public String filename = "";
